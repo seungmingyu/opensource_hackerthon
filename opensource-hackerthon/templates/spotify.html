@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#1db954">
-  <title>🎵 Music Mood</title>
+  <meta name="theme-color" content="#121212">
+  <title>🎵 Recotify</title>
   <style>
     * {
       margin: 0;
@@ -16,7 +16,7 @@
     html, body {
       height: 100%;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-      background: linear-gradient(180deg, #0a0e27 0%, #1a1a2e 100%);
+      background: #121212;
       color: #ffffff;
       overflow-x: hidden;
     }
@@ -26,9 +26,9 @@
       position: sticky;
       top: 0;
       z-index: 100;
-      background: rgba(10, 14, 39, 0.95);
+      background: rgba(30, 30, 30, 0.95);
       backdrop-filter: blur(20px);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
       padding: 12px 16px;
     }
 
@@ -41,7 +41,7 @@
     .logo {
       font-size: 20px;
       font-weight: 700;
-      color: #1db954;
+      color: #ffffff;
       display: flex;
       align-items: center;
       gap: 6px;
@@ -57,24 +57,36 @@
 
     .login-btn {
       padding: 8px 16px;
-      background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
+      background: #ffffff;
       color: #000;
       border: none;
       border-radius: 20px;
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
-      box-shadow: 0 4px 12px rgba(29, 185, 84, 0.3);
+      transition: all 0.3s ease;
+    }
+
+    .login-btn:hover {
+      background: #f0f0f0;
+      transform: scale(1.05);
     }
 
     .logout-btn {
       padding: 6px 14px;
       background: transparent;
-      color: #b3b3b3;
+      color: #d0d0d0;
       border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 16px;
       font-size: 12px;
       cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .logout-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.3);
     }
 
     /* 메인 컨테이너 */
@@ -99,10 +111,10 @@
 
     .tab-btn {
       padding: 10px 20px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 20px;
-      color: #b3b3b3;
+      color: #e0e0e0;
       font-size: 14px;
       white-space: nowrap;
       cursor: pointer;
@@ -110,11 +122,14 @@
     }
 
     .tab-btn.active {
-      background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
+      background: #ffffff;
       color: #000;
       border-color: transparent;
       font-weight: 600;
-      box-shadow: 0 4px 12px rgba(29, 185, 84, 0.3);
+    }
+
+    .tab-btn:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.15);
     }
 
     /* 탭 컨텐츠 */
@@ -134,8 +149,8 @@
 
     /* 카드 스타일 */
     .feature-card {
-      background: linear-gradient(135deg, rgba(29, 185, 84, 0.1) 0%, rgba(30, 215, 96, 0.05) 100%);
-      border: 1px solid rgba(29, 185, 84, 0.2);
+      background: rgba(30, 30, 30, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 20px;
       padding: 24px;
       margin-bottom: 16px;
@@ -175,8 +190,8 @@
     .input-field {
       width: 100%;
       padding: 14px 16px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 12px;
       color: #fff;
       font-size: 14px;
@@ -185,12 +200,12 @@
 
     .input-field:focus {
       outline: none;
-      border-color: #1db954;
-      background: rgba(255, 255, 255, 0.08);
+      border-color: #ffffff;
+      background: rgba(255, 255, 255, 0.15);
     }
 
     .input-field::placeholder {
-      color: #666;
+      color: #999;
     }
 
     /* 버튼 그룹 */
@@ -202,7 +217,7 @@
     .action-btn {
       flex: 1;
       padding: 14px;
-      background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
+      background: #ffffff;
       color: #000;
       border: none;
       border-radius: 12px;
@@ -210,7 +225,11 @@
       font-weight: 600;
       cursor: pointer;
       transition: all 0.3s ease;
-      box-shadow: 0 4px 12px rgba(29, 185, 84, 0.3);
+    }
+
+    .action-btn:hover:not(:disabled) {
+      background: #f0f0f0;
+      transform: scale(1.05);
     }
 
     .action-btn:active {
@@ -218,22 +237,26 @@
     }
 
     .action-btn:disabled {
-      background: rgba(255, 255, 255, 0.1);
-      color: #666;
-      box-shadow: none;
+      background: #535353;
+      color: #b3b3b3;
       cursor: not-allowed;
     }
 
     .action-btn.secondary {
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.15);
       color: #fff;
-      box-shadow: none;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .action-btn.secondary:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.3);
     }
 
     /* 결과 패널 */
     .result-panel {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(30, 30, 30, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 16px;
       padding: 16px;
       margin-top: 20px;
@@ -253,8 +276,8 @@
 
     .result-count {
       font-size: 12px;
-      color: #1db954;
-      background: rgba(29, 185, 84, 0.1);
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.15);
       padding: 4px 10px;
       border-radius: 12px;
     }
@@ -269,11 +292,11 @@
 
     .meta-tag {
       padding: 6px 12px;
-      background: rgba(29, 185, 84, 0.1);
-      border: 1px solid rgba(29, 185, 84, 0.3);
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.35);
       border-radius: 16px;
       font-size: 12px;
-      color: #1db954;
+      color: #ffffff;
       display: flex;
       align-items: center;
       gap: 4px;
@@ -299,7 +322,7 @@
     }
 
     .track-list::-webkit-scrollbar-thumb {
-      background: #1db954;
+      background: #ffffff;
       border-radius: 2px;
     }
 
@@ -307,14 +330,20 @@
       display: flex;
       gap: 12px;
       padding: 10px;
-      background: rgba(255, 255, 255, 0.03);
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 12px;
       cursor: pointer;
       transition: all 0.2s ease;
     }
 
+    .track-item:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
     .track-item:active {
-      background: rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.15);
       transform: scale(0.98);
     }
 
@@ -323,7 +352,7 @@
       height: 50px;
       border-radius: 8px;
       object-fit: cover;
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba(255, 255, 255, 0.1);
       flex-shrink: 0;
     }
 
@@ -358,8 +387,8 @@
     .loading-spinner {
       width: 40px;
       height: 40px;
-      border: 3px solid rgba(29, 185, 84, 0.2);
-      border-top-color: #1db954;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top-color: #ffffff;
       border-radius: 50%;
       animation: spin 1s linear infinite;
       margin: 0 auto 16px;
@@ -378,7 +407,7 @@
     .empty-state {
       text-align: center;
       padding: 40px 20px;
-      color: #666;
+      color: #999;
     }
 
     .empty-icon {
@@ -394,13 +423,13 @@
 
     /* 성공 메시지 */
     .success-msg {
-      background: rgba(29, 185, 84, 0.1);
-      border: 1px solid rgba(29, 185, 84, 0.3);
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.35);
       border-radius: 12px;
       padding: 12px;
       margin-top: 12px;
       font-size: 13px;
-      color: #1db954;
+      color: #ffffff;
       text-align: center;
       display: none;
     }
@@ -416,7 +445,7 @@
     }
 
     .success-msg a {
-      color: #1ed760;
+      color: #ffffff;
       text-decoration: underline;
       font-weight: 600;
     }
@@ -437,33 +466,6 @@
       }
     }
 
-    /* 다크모드 지원 */
-    @media (prefers-color-scheme: light) {
-      html, body {
-        background: linear-gradient(180deg, #f5f7fa 0%, #e8ebf0 100%);
-        color: #1a1a2e;
-      }
-      
-      .header {
-        background: rgba(255, 255, 255, 0.95);
-        border-bottom-color: rgba(0, 0, 0, 0.1);
-      }
-      
-      .logo {
-        color: #1db954;
-      }
-      
-      .track-item {
-        background: rgba(0, 0, 0, 0.03);
-      }
-      
-      .input-field {
-        background: rgba(0, 0, 0, 0.05);
-        border-color: rgba(0, 0, 0, 0.1);
-        color: #1a1a2e;
-      }
-    }
-
     /* 애니메이션 최적화 */
     @media (prefers-reduced-motion: reduce) {
       * {
@@ -480,7 +482,7 @@
     <div class="header-content">
       <div class="logo">
         <span>🎵</span>
-        <span>Music Mood</span>
+        <span>Recotify</span>
       </div>
       <div class="user-info">
         <span id="userGreeting"></span>
@@ -494,8 +496,8 @@
   <div class="container">
     <!-- 탭 네비게이션 -->
     <div class="tab-nav">
-      <button class="tab-btn active" onclick="switchTab(0)">🌤️ 날씨 추천</button>
-      <button class="tab-btn" onclick="switchTab(1)">🎼 플레이리스트</button>
+      <button class="tab-btn active" onclick="switchTab(0)">🌤️ 날씨 맞춤</button>
+      <button class="tab-btn" onclick="switchTab(1)">🎼 기분 전환</button>
       <button class="tab-btn" onclick="switchTab(2)">✨ 더보기</button>
     </div>
 
@@ -505,8 +507,9 @@
         <div class="feature-icon">🌤️</div>
         <div class="feature-title">날씨 기반 추천</div>
         <div class="feature-desc">
-          지금 날씨에 딱 맞는 음악을<br>
-          당신의 취향을 반영해 추천해드려요
+          지금 날씨와 당신이 최근에 들은 곡의<br>
+          <strong>취향을 분석</strong>해 <strong>당신만의 맞춤 음악</strong>을<br>
+          추천해드려요
         </div>
         <button class="action-btn" onclick="getWeatherRecommendation()" id="weatherBtn">
           추천 받기
@@ -545,18 +548,20 @@
     <div class="tab-content" id="tab2">
       <div class="feature-card">
         <div class="feature-icon">🎼</div>
-        <div class="feature-title">유사/반대 추천</div>
+        <div class="feature-title">기분 전환 추천</div>
         <div class="feature-desc">
           플레이리스트를 분석해서<br>
-          비슷하거나 정반대 분위기의 음악을 찾아드려요
+          <strong>유사한 분위기</strong>로 깊게 빠져들거나<br>
+          <strong>반대 분위기</strong>로 기분 전환할 음악을<br>
+          찾아드려요
         </div>
         
         <div class="input-group">
           <input 
             type="text" 
             class="input-field" 
-            id="playlistUrl"
-            placeholder="Spotify 플레이리스트 URL 입력"
+            id="playlistName"
+            placeholder="플레이리스트 이름 입력 (예: 차분한 재즈)"
           />
         </div>
         
@@ -564,7 +569,7 @@
           <button class="action-btn" onclick="getPlaylistRecommendation(false)">
             유사 추천
           </button>
-          <button class="action-btn secondary" onclick="getPlaylistRecommendation(true)">
+          <button class="action-btn" onclick="getPlaylistRecommendation(true)">
             반대 추천
           </button>
         </div>
@@ -684,9 +689,8 @@
         
         document.getElementById('weatherMeta').innerHTML = `
           <div class="meta-tag"><span>📍</span>${data.location.name}</div>
-          <div class="meta-tag"><span>🌡️</span>${temp}°C</div>
-          <div class="meta-tag"><span>☁️</span>${weatherText}</div>
-          <div class="meta-tag"><span>🎵</span>${ruleKrText}</div>
+          <div class="meta-tag"><span>🌡️</span>${temp}°C · ${weatherText}</div>
+          <div class="meta-tag"><span>🎵</span>${ruleKrText} 분위기</div>
         `;
         
         document.getElementById('weatherCount').textContent = `${data.tracks.length}곡`;
@@ -775,10 +779,10 @@
 
     // 플레이리스트 추천
     async function getPlaylistRecommendation(invert) {
-      const url = document.getElementById('playlistUrl').value.trim();
+      const playlistName = document.getElementById('playlistName').value.trim();
       
-      if (!url) {
-        alert('플레이리스트 URL을 입력해주세요');
+      if (!playlistName) {
+        alert('플레이리스트 이름을 입력해주세요');
         return;
       }
       
@@ -792,8 +796,9 @@
         const res = await fetch('/lastfm/recommend', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({
-            playlist_url: url,
+            playlist_name: playlistName,
             invert: invert,
             limit: 24,
             variant: lastfmVariant
@@ -801,18 +806,62 @@
         });
         
         if (!res.ok) {
-          const errorText = await res.text();
-          throw new Error(`HTTP ${res.status}`);
+          const errorData = await res.json().catch(() => ({}));
+          const errorMsg = errorData.detail || `HTTP ${res.status}`;
+          throw new Error(errorMsg);
         }
         
         const data = await res.json();
         lastfmVariant += 1;
         
-        document.getElementById('playlistMeta').innerHTML = `
-          <div class="meta-tag"><span>🎼</span>${invert ? '반대 분위기' : '유사한 곡'}</div>
-          <div class="meta-tag"><span>📀</span>Deezer</div>
-          <div class="meta-tag"><span>🔄</span>Last.fm</div>
-        `;
+        // 태그 한글 번역
+        const tagTranslations = {
+          'acoustic': '어쿠스틱',
+          'piano': '피아노',
+          'ballad': '발라드',
+          'jazz': '재즈',
+          'classical': '클래식',
+          'ambient': '앰비언트',
+          'singer-songwriter': '싱어송라이터',
+          'indie folk': '인디 포크',
+          'dance': '댄스',
+          'electronic': '일렉트로닉',
+          'pop': '팝',
+          'upbeat': '경쾌한',
+          'energetic': '에너제틱',
+          'party': '파티',
+          'house': '하우스',
+          'edm': 'EDM',
+          'happy': '행복한',
+          'summer': '여름',
+          'feel good': '기분좋은',
+          'cheerful': '밝은',
+          'funk': '펑크',
+          'disco': '디스코',
+          'sad': '슬픈',
+          'melancholy': '우울한',
+          'emotional': '감성적인',
+          'rock': '록',
+          'indie': '인디',
+          'k-pop': 'K-POP',
+          'chill': '칠',
+          'hip-hop': '힙합',
+          'metal': '메탈',
+          'lofi': '로파이'
+        };
+        
+        // 메타 정보 표시 - 개별 태그로
+        let metaHtml = '';
+        
+        if (data.used_tags && data.used_tags.length > 0) {
+          // 사용된 태그를 개별적으로 표시
+          data.used_tags.slice(0, 5).forEach(tag => {
+            const koreanTag = tagTranslations[tag.toLowerCase()] || tag;
+            metaHtml += `<div class="meta-tag"><span>🎵</span>${koreanTag}</div>`;
+          });
+        }
+        
+        document.getElementById('playlistMeta').innerHTML = metaHtml;
         
         document.getElementById('playlistCount').textContent = `${data.tracks.length}곡`;
         
@@ -840,7 +889,7 @@
         loadingDiv.innerHTML = `
           <div class="empty-state">
             <div class="empty-icon">⚠️</div>
-            <div class="empty-text">오류가 발생했습니다<br>다시 시도해주세요</div>
+            <div class="empty-text">오류가 발생했습니다<br>${err.message}</div>
           </div>
         `;
         setTimeout(() => {

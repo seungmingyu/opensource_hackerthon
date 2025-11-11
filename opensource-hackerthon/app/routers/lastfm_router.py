@@ -7,9 +7,11 @@ import hashlib
 from typing import List, Dict, Optional
 import httpx
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
 from collections import Counter
 from dotenv import load_dotenv
+from app.routers.user_router import current_user
+from app.core.database import get_db
 
 load_dotenv()
 
@@ -314,10 +316,12 @@ def rng_from(*vals) -> random.Random:
 
 
 # ====== 추천 파이프라인 ======
-async def recommend_from_lastfm(url: str, invert: bool, limit: int, variant: int) -> Dict:
+async def recommend_from_lastfm(url: str, invert: bool, limit: int, variant: int, playlist_name: str = "") -> Dict:
     print(f"\n{'='*70}")
     print(f"🎵 [Last.fm 추천 시작]")
     print(f"   - 플레이리스트 URL: {url}")
+    if playlist_name:
+        print(f"   - 플레이리스트 이름: {playlist_name}")
     print(f"   - 추천 모드: {'반대 분위기' if invert else '유사한 곡'}")
     print(f"   - 목표 곡 수: {limit}")
     print(f"   - Variant: {variant}")
@@ -348,6 +352,7 @@ async def recommend_from_lastfm(url: str, invert: bool, limit: int, variant: int
         print(f"      {i}. {artist} - {track}")
     
     collected = []
+    used_tags = []  # 사용된 태그를 저장
     
     # Step 2: Last.fm 데이터 수집
     print(f"\n[Step 2] Last.fm API 호출 중...")
@@ -356,6 +361,22 @@ async def recommend_from_lastfm(url: str, invert: bool, limit: int, variant: int
         if not invert:
             # 유사 추천 모드
             print(f"   📡 유사 트랙 검색 (Similar Tracks API)")
+            
+            # 시드 곡들의 태그도 수집 (표시용)
+            print(f"   🏷️  시드 곡 태그 수집 중...")
+            seed_tags = []
+            for a, n in seed_pairs[:3]:  # 처음 3곡만 태그 수집
+                track_tags = await lf_track_tags(a, n)
+                if track_tags:
+                    seed_tags += track_tags[:5]  # 각 곡당 최대 5개 태그
+            
+            if seed_tags:
+                # 빈도수 높은 태그 추출
+                tag_counter = Counter(seed_tags)
+                top_tags = [tag for tag, _ in tag_counter.most_common(5)]
+                used_tags = top_tags
+                print(f"   ✓ 추출된 주요 태그: {', '.join(top_tags)}")
+            
             success_count = 0
             fail_count = 0
             
@@ -430,6 +451,7 @@ async def recommend_from_lastfm(url: str, invert: bool, limit: int, variant: int
                 rng.shuffle(opp)
                 
                 selected_tags = opp[:rng.randint(3, 5)]
+                used_tags = selected_tags.copy()  # 사용된 태그 저장
                 print(f"   🎯 선택된 태그 ({len(selected_tags)}개): {', '.join(selected_tags)}")
                 
                 for idx, tg in enumerate(selected_tags, 1):
@@ -444,13 +466,43 @@ async def recommend_from_lastfm(url: str, invert: bool, limit: int, variant: int
                     else:
                         print(f"      ❌ 트랙 없음")
             else:
-                print(f"   ⚠️  태그를 찾지 못함 → 마이너/언더그라운드 음악으로 추정")
-                print(f"   💡 대안: 차분하고 감성적인 태그 사용 (반대 분위기)")
+                # 태그를 찾지 못한 경우 - 플레이리스트 이름/설명으로 추론
+                print(f"   ⚠️  태그를 찾지 못함 → 플레이리스트 정보로 분위기 추론 시도")
                 
-                # 시끄럽지 않고 감성적인 반대 태그
-                alternative_tags = ["sad", "melancholy", "acoustic", "piano", "ballad", "emotional", "indie folk", "singer-songwriter"]
+                # 플레이리스트 이름에서 키워드 추출하여 반대 분위기 결정
+                name_to_check = (playlist_name or url or "").lower()
+                
+                # 에너지 높은 음악의 반대 -> 차분한 음악
+                high_energy_keywords = ["신나는", "랩", "힙합", "edm", "party", "club", "dance", "workout", "gym", "rock", "metal", "에너지", "빠른"]
+                # 차분한 음악의 반대 -> 에너지 있는 음악  
+                calm_keywords = ["차분", "잔잔", "수면", "sleep", "relaxing", "calm", "study", "chill", "lofi"]
+                # 슬픈 음악의 반대 -> 밝은 음악
+                sad_keywords = ["슬픈", "sad", "melancholy", "breakup", "이별"]
+                
+                is_high_energy = any(kw in name_to_check for kw in high_energy_keywords)
+                is_calm = any(kw in name_to_check for kw in calm_keywords)
+                is_sad = any(kw in name_to_check for kw in sad_keywords)
+                
+                if is_high_energy:
+                    # 신나는 음악의 반대 -> 차분하고 감성적인 음악
+                    print(f"   💡 추론: 에너지 높은 음악 → 반대로 차분한 음악 추천")
+                    alternative_tags = ["acoustic", "piano", "ballad", "jazz", "classical", "ambient", "singer-songwriter", "indie folk"]
+                elif is_calm:
+                    # 차분한 음악의 반대 -> 신나는 음악
+                    print(f"   💡 추론: 차분한 음악 → 반대로 에너지 있는 음악 추천")
+                    alternative_tags = ["dance", "electronic", "pop", "upbeat", "energetic", "party", "house", "edm"]
+                elif is_sad:
+                    # 슬픈 음악의 반대 -> 밝고 긍정적인 음악
+                    print(f"   💡 추론: 슬픈 음악 → 반대로 밝은 음악 추천")
+                    alternative_tags = ["happy", "upbeat", "summer", "feel good", "cheerful", "pop", "funk", "disco"]
+                else:
+                    # 기본 대체: 다양한 차분한 태그
+                    print(f"   💡 기본 대체: 다양한 감성 음악 추천")
+                    alternative_tags = ["sad", "melancholy", "acoustic", "piano", "ballad", "emotional", "indie folk", "singer-songwriter"]
+                
                 rng.shuffle(alternative_tags)
                 selected_tags = alternative_tags[:rng.randint(4, 6)]
+                used_tags = selected_tags.copy()  # 사용된 태그 저장
                 print(f"   🎯 대체 태그 ({len(selected_tags)}개): {', '.join(selected_tags)}")
                 
                 for idx, tg in enumerate(selected_tags, 1):
@@ -469,8 +521,10 @@ async def recommend_from_lastfm(url: str, invert: bool, limit: int, variant: int
         base_tags = ["pop", "rock", "indie", "k-pop", "dance", "chill", "house", "hip-hop", "ambient", "metal"]
         rng.shuffle(base_tags)
         tags_src = ["ambient", "sad", "lofi"] if invert else base_tags
+        selected_tags = tags_src[:rng.randint(3, 5)]
+        used_tags = selected_tags.copy()  # 사용된 태그 저장
         
-        for tg in tags_src[:rng.randint(3, 5)]:
+        for tg in selected_tags:
             print(f"   검색 중: '{tg}' 태그")
             top = await lf_top_by_tag(tg, limit=60)
             if top:
@@ -520,14 +574,16 @@ async def recommend_from_lastfm(url: str, invert: bool, limit: int, variant: int
     
     print(f"\n{'='*70}")
     print(f"✅ [추천 완료] {len(out)}개 트랙 반환")
+    if used_tags:
+        print(f"   🏷️  사용된 태그: {', '.join(used_tags)}")
     print(f"{'='*70}\n")
     
-    return {"tracks": out}
+    return {"tracks": out, "used_tags": used_tags}
 
 
 # ====== API ======
 class RecommendRequest(BaseModel):
-    playlist_url: HttpUrl
+    playlist_name: str  # 플레이리스트 이름으로 검색
     invert: bool = False
     limit: int = Field(default=24, ge=1, le=100)
     variant: int = 0
@@ -539,13 +595,61 @@ def health():
 
 
 @router.post("/recommend")
-async def recommend(req: RecommendRequest):
+async def recommend(req: RecommendRequest, u = Depends(current_user), db = Depends(get_db)):
     if not LASTFM_API_KEY:
         raise HTTPException(500, "LASTFM_API_KEY 미설정")
+    
+    # 로그인 필요
+    if not u:
+        raise HTTPException(401, "로그인이 필요합니다")
+    
     try:
-        data = await recommend_from_lastfm(str(req.playlist_url), req.invert, req.limit, req.variant)
+        from app.services.spotify import playlist_search, playlist_tracks
+        import random
+        
+        # 1. 플레이리스트 이름으로 검색
+        print(f"\n[Last.fm 추천] 플레이리스트 검색: '{req.playlist_name}'")
+        search_results = playlist_search(u.access_token, req.playlist_name, market="KR", limit=8)
+        
+        if not search_results:
+            raise HTTPException(404, f"'{req.playlist_name}' 플레이리스트를 찾을 수 없습니다")
+        
+        # 검색 결과 출력
+        print(f"[Last.fm 추천] 검색 결과: {len(search_results)}개 플레이리스트 발견")
+        for idx, pl in enumerate(search_results[:5], 1):
+            print(f"   {idx}. {pl.get('name', 'Unknown')} (트랙: {pl.get('tracks', {}).get('total', '?')}개)")
+        
+        # variant 값을 시드로 사용하여 랜덤하게 선택 (같은 variant면 같은 결과)
+        # variant가 증가할 때마다 다른 플레이리스트 선택
+        rng = random.Random(f"{req.playlist_name}_{req.variant}")
+        selected_playlist = rng.choice(search_results[:min(5, len(search_results))])
+        
+        playlist_id = selected_playlist.get("id")
+        playlist_name_found = selected_playlist.get("name", "Unknown")
+        playlist_track_count = selected_playlist.get("tracks", {}).get("total", "?")
+        
+        print(f"[Last.fm 추천] ✨ 선택된 플레이리스트: {playlist_name_found} (트랙: {playlist_track_count}개)")
+        
+        # 2. 플레이리스트의 Spotify URL 구성
+        playlist_url = f"https://open.spotify.com/playlist/{playlist_id}"
+        
+        # 3. 기존 Last.fm 추천 로직 사용 (플레이리스트 이름 전달)
+        data = await recommend_from_lastfm(playlist_url, req.invert, req.limit, req.variant, playlist_name_found)
+        
         if not data["tracks"]:
             raise HTTPException(502, "후보를 찾지 못했습니다.")
+        
+        # 플레이리스트 정보 추가
+        data["source_playlist"] = {
+            "id": playlist_id,
+            "name": playlist_name_found,
+            "url": playlist_url
+        }
+        
         return data
+        
+    except HTTPException:
+        raise
     except Exception as e:
+        print(f"[Last.fm 추천] 오류: {e}")
         raise HTTPException(500, f"Internal error: {e!r}")
