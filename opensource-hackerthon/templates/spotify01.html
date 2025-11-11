@@ -1,0 +1,908 @@
+<!doctype html>
+<html lang="ko">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spotify - 음악 추천</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #000000;
+      color: #ffffff;
+    }
+
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 32px;
+      background: rgba(18, 18, 18, 0.95);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      z-index: 100;
+      flex-shrink: 0;
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -1px;
+      color: #1db954;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .logo:hover {
+      color: #1ed760;
+      transform: scale(1.05);
+    }
+
+    .user-section {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .user-greeting {
+      font-size: 14px;
+      font-weight: 500;
+      color: #b3b3b3;
+    }
+
+    .login-button {
+      padding: 10px 24px;
+      background: #1db954;
+      color: #000000;
+      border: none;
+      border-radius: 24px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .login-button:hover {
+      background: #1ed760;
+      transform: scale(1.05);
+    }
+
+    .logout-button {
+      padding: 8px 20px;
+      background: transparent;
+      color: #b3b3b3;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .logout-button:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      background: linear-gradient(135deg, #121212 0%, #1a1a1a 100%);
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Layout split: left cards + right sidebar */
+    .content-row {
+      height: 100%;
+      display: flex;
+      gap: 24px;
+      padding: 0 24px 24px 24px;
+    }
+
+    .carousel-container {
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+      flex: 1;
+      display: flex;
+      justify-content: center;
+    }
+
+    .card-track {
+      display: flex;
+      height: 100%;
+      transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      width: 100%;
+      max-width: 1100px;
+    }
+
+    .card {
+      min-width: 100%;
+      width: 100%;
+      height: 100%;
+      padding: 40px 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .card-inner {
+      width: 100%;
+      max-width: 1000px;
+      height: 100%;
+      display: flex;
+      gap: 40px;
+      margin: 0 auto;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* 왼쪽 소개 */
+    .card-left {
+      flex: 0 0 400px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .card-icon {
+      font-size: 72px;
+      margin-bottom: 24px;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .card-title {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: #ffffff;
+      line-height: 1.2;
+    }
+
+    .card-description {
+      font-size: 16px;
+      line-height: 1.6;
+      color: #b3b3b3;
+      margin-bottom: 32px;
+      max-width: 350px;
+    }
+
+    .card-button {
+      padding: 16px 40px;
+      background: #1db954;
+      color: #000000;
+      border: none;
+      border-radius: 32px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 20px rgba(29, 185, 84, 0.3);
+    }
+
+    .card-button:hover:not(:disabled) {
+      background: #1ed760;
+      transform: scale(1.05);
+      box-shadow: 0 6px 30px rgba(29, 185, 84, 0.5);
+    }
+
+    .card-button:disabled {
+      background: #535353;
+      color: #b3b3b3;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    /* Persistent right sidebar */
+    .sidebar {
+      flex: 0 0 420px;
+      height: 100%;
+      background: rgba(10, 10, 10, 0.6);
+      border-radius: 16px;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      overflow: hidden;
+    }
+
+    .result-state {
+      display: none;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .result-state.active {
+      display: flex;
+    }
+
+    /* 기본 상태 */
+    .state-default {
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .default-icon {
+      font-size: 56px;
+      margin-bottom: 16px;
+      opacity: 0.3;
+    }
+
+    .default-text {
+      font-size: 15px;
+      line-height: 1.6;
+      color: #666;
+    }
+
+    /* 로딩 상태 */
+    .state-loading {
+      align-items: center;
+      justify-content: center;
+    }
+
+    .loading-spinner {
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top: 3px solid #1db954;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 16px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* 결과 상태 */
+    .state-result {
+      overflow: hidden;
+    }
+
+    .result-header {
+      margin-bottom: 16px;
+      flex-shrink: 0;
+    }
+
+    .result-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1db954;
+      margin-bottom: 12px;
+    }
+
+    .result-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .meta-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      font-size: 12px;
+      color: #e0e0e0;
+    }
+
+    .track-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 16px;
+      padding-right: 4px;
+    }
+
+    .track-list::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .track-list::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 3px;
+    }
+
+    .track-list::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 3px;
+    }
+
+    .track-list::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .track-item {
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 8px;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .track-item:hover {
+      background: rgba(29, 185, 84, 0.1);
+      transform: translateX(3px);
+    }
+
+    .track-image {
+      width: 44px;
+      height: 44px;
+      border-radius: 4px;
+      object-fit: cover;
+      flex-shrink: 0;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    .track-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .track-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .track-artist {
+      font-size: 11px;
+      color: #b3b3b3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .result-actions {
+      flex-shrink: 0;
+    }
+
+    .save-btn {
+      width: 100%;
+      padding: 12px;
+      background: #1db954;
+      color: #000000;
+      border: none;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 3px 12px rgba(29, 185, 84, 0.3);
+    }
+
+    .save-btn:hover:not(:disabled) {
+      background: #1ed760;
+      transform: scale(1.02);
+    }
+
+    .save-btn:disabled {
+      background: #535353;
+      color: #b3b3b3;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .success-msg {
+      margin-top: 10px;
+      padding: 12px;
+      background: rgba(29, 185, 84, 0.15);
+      border: 1px solid rgba(29, 185, 84, 0.4);
+      border-radius: 8px;
+      text-align: center;
+      font-size: 13px;
+      color: #1db954;
+      display: none;
+    }
+
+    .success-msg.show {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(5px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .success-msg a {
+      color: #1ed760;
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .success-msg a:hover {
+      text-decoration: underline;
+    }
+
+    /* Navigation */
+    .nav-arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: #ffffff;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 20px;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    .nav-arrow:hover {
+      background: rgba(29, 185, 84, 0.4);
+      transform: translateY(-50%) scale(1.1);
+    }
+
+    .nav-arrow.prev {
+      left: 16px;
+    }
+
+    .nav-arrow.next {
+      right: 16px;
+    }
+
+    .nav-dots {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      z-index: 10;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .dot:hover {
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    .dot.active {
+      background: #1db954;
+      width: 28px;
+      border-radius: 5px;
+    }
+  </style>
+ </head>
+ <body>
+  <div class="app-container">
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">🎧 Spotify</div>
+      <div class="user-section">
+        <div class="user-greeting" id="userGreeting"></div>
+        <button class="login-button" id="loginBtn" style="display: none;">Spotify로 로그인</button>
+        <button class="logout-button" id="logoutBtn" style="display: none;">로그아웃</button>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <div class="content-row">
+        <div class="carousel-container">
+        <button class="nav-arrow prev" onclick="prevCard()">‹</button>
+        <button class="nav-arrow next" onclick="nextCard()">›</button>
+        
+        <div class="card-track" id="cardTrack">
+          <!-- Card 1: 날씨 기반 -->
+          <div class="card">
+            <div class="card-inner">
+              <div class="card-left">
+                <span class="card-icon">🌤️</span>
+                <h2 class="card-title">날씨 기반 추천</h2>
+                <p class="card-description">
+                  지금 날씨를 바탕으로<br>
+                  당신의 Spotify 기록을 분석해 추천해드려요
+                </p>
+                <button class="card-button" onclick="getRecommendation()" id="recBtn">추천 받기</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Last.fm + Deezer 추천 -->
+          <div class="card">
+            <div class="card-inner">
+              <div class="card-left">
+                <span class="card-icon">🎼</span>
+                <h2 class="card-title">플레이리스트<br>유사/반대 추천</h2>
+                <p class="card-description">
+                  Spotify 플레이리스트를 바탕으로<br>
+                  유사한 곡 또는 정반대 분위기 추천
+                </p>
+                <input 
+                  type="text" 
+                  id="playlistUrlInput" 
+                  placeholder="Spotify 플레이리스트 URL 입력"
+                  style="width: 100%; padding: 12px; margin: 16px 0 12px 0; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); color: #fff; font-size: 14px;"
+                />
+                <div style="display: flex; gap: 8px; width: 100%;">
+                  <button class="card-button" onclick="getLastfmRecommendation(false)" style="flex: 1; padding: 12px; font-size: 14px;">유사 추천</button>
+                  <button class="card-button" onclick="getLastfmRecommendation(true)" style="flex: 1; padding: 12px; font-size: 14px;">반대 추천</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: 새로운 기능 -->
+          <div class="card">
+            <div class="card-inner">
+              <div class="card-left">
+                <span class="card-icon">✨</span>
+                <h2 class="card-title">새로운 기능<br>준비 중</h2>
+                <p class="card-description">
+                  더 많은 음악 추천 기능이<br>곧 찾아옵니다
+                </p>
+                <button class="card-button" disabled>Coming Soon</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="nav-dots">
+          <span class="dot active" onclick="goTo(0)"></span>
+          <span class="dot" onclick="goTo(1)"></span>
+          <span class="dot" onclick="goTo(2)"></span>
+        </div>
+      </div>
+
+        <!-- Right Sidebar: persistent recommendation panel -->
+        <div class="sidebar">
+          <div class="result-state state-default active" id="stateDefault">
+            <div class="default-icon">🎧</div>
+            <div class="default-text">
+              "추천 받기" 버튼을 눌러<br>
+              날씨에 맞는 음악을 추천받아보세요
+            </div>
+          </div>
+          
+          <div class="result-state state-loading" id="stateLoading">
+            <div class="loading-spinner"></div>
+            <p style="color: #b3b3b3; font-size: 14px;">추천을 불러오는 중...</p>
+          </div>
+          
+          <div class="result-state state-result" id="stateResult">
+            <div class="result-header">
+              <div class="result-title">오늘의 추천 플레이리스트</div>
+              <div class="result-meta" id="metaInfo"></div>
+            </div>
+            
+            <div class="track-list" id="trackList"></div>
+            
+            <div class="result-actions">
+              <button class="save-btn" id="sidebarSaveBtn">💾 플레이리스트로 저장</button>
+              <div class="success-msg" id="successMsg"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const weatherKr = {
+      'Clear': '맑음', 'Clouds': '구름', 'Rain': '비', 'Drizzle': '이슬비',
+      'Thunderstorm': '뇌우', 'Snow': '눈', 'Mist': '안개', 'Smoke': '연무',
+      'Haze': '실안개', 'Dust': '먼지', 'Fog': '안개', 'Sand': '모래바람',
+      'Ash': '화산재', 'Squall': '돌풍', 'Tornado': '토네이도'
+    };
+
+    let currentCard = 0;
+    let recommendationData = null;
+    let lastfmVariant = 0;  // Last.fm 추천 변형 카운터
+    
+    async function checkLogin() {
+      try {
+        const res = await fetch('/current_user');
+        const data = await res.json();
+        
+        const greeting = document.getElementById('userGreeting');
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const recBtn = document.getElementById('recBtn');
+        
+        if (data.logged_in) {
+          greeting.textContent = `${data.name}님`;
+          loginBtn.style.display = 'none';
+          logoutBtn.style.display = 'block';
+          recBtn.disabled = false;
+        } else {
+          greeting.textContent = '';
+          loginBtn.style.display = 'block';
+          logoutBtn.style.display = 'none';
+          recBtn.disabled = true;
+        }
+      } catch (err) {
+        console.error('Login check error:', err);
+      }
+    }
+    
+    document.getElementById('loginBtn').onclick = () => window.location.href = '/login';
+    document.getElementById('logoutBtn').onclick = () => window.location.href = '/logout';
+    
+    function updateSlider() {
+      const track = document.getElementById('cardTrack');
+      const dots = document.querySelectorAll('.dot');
+      
+      track.style.transform = `translateX(-${currentCard * 100}%)`;
+      
+      dots.forEach((dot, i) => {
+        dot.classList.toggle('active', i === currentCard);
+      });
+    }
+
+    function nextCard() {
+      currentCard = (currentCard + 1) % 3;
+      updateSlider();
+    }
+
+    function prevCard() {
+      currentCard = (currentCard - 1 + 3) % 3;
+      updateSlider();
+    }
+
+    function goTo(index) {
+      currentCard = index;
+      updateSlider();
+    }
+    
+    async function getRecommendation() {
+      const stateDefault = document.getElementById('stateDefault');
+      const stateLoading = document.getElementById('stateLoading');
+      const stateResult = document.getElementById('stateResult');
+      const recBtn = document.getElementById('recBtn');
+      
+      stateDefault.classList.remove('active');
+      stateLoading.classList.add('active');
+      stateResult.classList.remove('active');
+      recBtn.disabled = true;
+      
+      try {
+        const res = await fetch('/recommend/weather', { credentials: 'include' });
+        
+        if (!res.ok) {
+          throw new Error(await res.text());
+        }
+        
+        const data = await res.json();
+        recommendationData = data;
+        
+        const weatherKrText = weatherKr[data.trigger.weather] || data.trigger.weather;
+        const temp = Math.round(parseFloat(data.trigger.feels_like));
+        const ruleKrText = data.trigger.rule_kr || data.trigger.rule;
+        
+        document.getElementById('metaInfo').innerHTML = `
+          <div class="meta-pill"><span>📍</span>${data.location.name}</div>
+          <div class="meta-pill"><span>🌡️</span>${temp}°C</div>
+          <div class="meta-pill"><span>☁️</span>${weatherKrText}</div>
+          <div class="meta-pill"><span>🎵</span>${ruleKrText}</div>
+        `;
+        
+        document.getElementById('trackList').innerHTML = data.tracks.map(t => {
+          const img = t.album_image || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="44" height="44"%3E%3Crect fill="%23222" width="44" height="44"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23666" font-size="18"%3E🎵%3C/text%3E%3C/svg%3E';
+          return `
+            <div class="track-item" onclick="window.open('${t.url}', '_blank')">
+              <img src="${img}" class="track-image" alt="">
+              <div class="track-info">
+                <div class="track-name">${t.name}</div>
+                <div class="track-artist">${t.artists}</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+        
+        stateLoading.classList.remove('active');
+        stateResult.classList.add('active');
+        document.getElementById('successMsg').classList.remove('show');
+        
+        // 날씨 추천은 저장 버튼 표시
+        document.getElementById('sidebarSaveBtn').style.display = 'block';
+        
+      } catch (err) {
+        console.error('Recommendation error:', err);
+        stateLoading.innerHTML = `<p style="color: #ff6b6b; font-size: 14px;">오류가 발생했습니다<br><small>${err.message}</small></p>`;
+      } finally {
+        recBtn.disabled = false;
+      }
+    }
+    
+    document.getElementById('sidebarSaveBtn').onclick = async function() {
+      if (!recommendationData) return;
+      
+      const btn = this;
+      const msg = document.getElementById('successMsg');
+      
+      btn.disabled = true;
+      btn.textContent = '저장 중...';
+      msg.classList.remove('show');
+      
+      try {
+        const now = new Date();
+        const date = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}`;
+        const weatherText = weatherKr[recommendationData.trigger.weather] || recommendationData.trigger.weather;
+        const temp = Math.round(parseFloat(recommendationData.trigger.feels_like));
+        const ruleKrText = recommendationData.trigger.rule_kr || recommendationData.trigger.rule;
+        
+        const res = await fetch('/recommend/weather/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            track_ids: recommendationData.tracks.map(t => t.id),
+            playlist_name: `🌤️ ${weatherText} - ${date}`,
+            description: `${temp}°C, ${ruleKrText} 분위기의 추천`
+          })
+        });
+        
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || '저장 실패');
+        }
+        
+        const result = await res.json();
+        
+        msg.innerHTML = `플레이리스트가 생성되었습니다! 🎉<br><a href="${result.playlist_url}" target="_blank">Spotify에서 보기 →</a>`;
+        msg.classList.add('show');
+        
+        btn.textContent = '✓ 저장 완료!';
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.textContent = '💾 플레이리스트로 저장';
+        }, 3000);
+        
+      } catch (err) {
+        alert('저장 실패: ' + err.message);
+        btn.disabled = false;
+        btn.textContent = '💾 플레이리스트로 저장';
+      }
+    };
+    
+    // Last.fm 추천 함수
+    async function getLastfmRecommendation(invert) {
+      const url = document.getElementById('playlistUrlInput').value.trim();
+      
+      if (!url) {
+        alert('Spotify 플레이리스트 URL을 입력해주세요');
+        return;
+      }
+      
+      const stateDefault = document.getElementById('stateDefault');
+      const stateLoading = document.getElementById('stateLoading');
+      const stateResult = document.getElementById('stateResult');
+      
+      stateDefault.classList.remove('active');
+      stateLoading.classList.add('active');
+      stateResult.classList.remove('active');
+      
+      try {
+        const res = await fetch('/lastfm/recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            playlist_url: url,
+            invert: invert,
+            limit: 24,
+            variant: lastfmVariant
+          })
+        });
+        
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(`HTTP ${res.status} - ${errorText}`);
+        }
+        
+        const data = await res.json();
+        lastfmVariant += 1;
+        
+        // 메타 정보 업데이트
+        document.getElementById('metaInfo').innerHTML = `
+          <div class="meta-pill"><span>🎼</span>${invert ? '반대 분위기' : '유사한 곡'}</div>
+          <div class="meta-pill"><span>📀</span>Deezer</div>
+          <div class="meta-pill"><span>🔄</span>Last.fm</div>
+        `;
+        
+        // 트랙 리스트 업데이트
+        document.getElementById('trackList').innerHTML = data.tracks.map(t => {
+          const img = (t.album && t.album.image) || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="44" height="44"%3E%3Crect fill="%23222" width="44" height="44"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23666" font-size="18"%3E🎵%3C/text%3E%3C/svg%3E';
+          const artistNames = (t.artists || []).join(', ');
+          const externalUrl = t.external_url || '#';
+          
+          return `
+            <div class="track-item" onclick="window.open('${externalUrl}', '_blank')">
+              <img src="${img}" class="track-image" alt="">
+              <div class="track-info">
+                <div class="track-name">${t.name}</div>
+                <div class="track-artist">${artistNames}</div>
+              </div>
+              ${t.preview_url ? `<audio controls style="width: 100%; margin-top: 8px;"><source src="${t.preview_url}" type="audio/mpeg"></audio>` : ''}
+            </div>
+          `;
+        }).join('');
+        
+        stateLoading.classList.remove('active');
+        stateResult.classList.add('active');
+        document.getElementById('successMsg').classList.remove('show');
+        
+        // Last.fm 추천은 저장 버튼 숨김 (Deezer 링크만 제공)
+        document.getElementById('sidebarSaveBtn').style.display = 'none';
+        
+      } catch (err) {
+        console.error('Last.fm 추천 오류:', err);
+        stateLoading.innerHTML = `<p style="color: #ff6b6b; font-size: 14px;">오류가 발생했습니다<br><small>${err.message}</small></p>`;
+        setTimeout(() => {
+          stateDefault.classList.add('active');
+          stateLoading.classList.remove('active');
+          stateLoading.innerHTML = `
+            <div class="loading-spinner"></div>
+            <p style="color: #b3b3b3; font-size: 14px;">추천을 불러오는 중...</p>
+          `;
+        }, 3000);
+      }
+    }
+    
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') prevCard();
+      if (e.key === 'ArrowRight') nextCard();
+    });
+    
+    checkLogin();
+  </script>
+ </body>
+</html>
