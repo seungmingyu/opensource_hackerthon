@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>날씨 기반 음악 추천</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: "Inter", "Apple SD Gothic Neo", sans-serif;
+      background: linear-gradient(180deg, #0b0f12, #121821);
+      color: #f1f5f9;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 { margin-bottom: 12px; font-weight: 700; font-size: 24px; }
+    p { color: #94a3b8; font-size: 14px; margin-bottom: 30px; text-align: center; }
+    button {
+      background: #3ba3ff;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 10px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s;
+      margin: 5px;
+    }
+    button:hover { background: #1f8fff; }
+    button:disabled {
+      background: #64748b;
+      cursor: not-allowed;
+    }
+    button.success {
+      background: #1DB954;
+    }
+    button.success:hover {
+      background: #1ed760;
+    }
+    #loading { margin-top: 30px; display: none; color: #94a3b8; }
+    #result { margin-top: 40px; width: 90%; max-width: 700px; text-align: left; display: none; }
+    .track {
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 10px;
+      transition: 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .track:hover {
+      background: rgba(255,255,255,0.1);
+      transform: translateX(4px);
+    }
+    .track-number {
+      font-size: 14px;
+      color: #64748b;
+      min-width: 30px;
+      font-weight: 600;
+    }
+    .track-info {
+      flex: 1;
+    }
+    .track-name {
+      font-weight: 600;
+      color: #f1f5f9;
+      margin-bottom: 4px;
+    }
+    .track-artist {
+      font-size: 13px;
+      color: #94a3b8;
+    }
+    .track a {
+      color: #3ba3ff;
+      text-decoration: none;
+      font-size: 13px;
+      padding: 6px 12px;
+      background: rgba(59, 163, 255, 0.1);
+      border-radius: 6px;
+      transition: 0.2s;
+    }
+    .track a:hover {
+      background: rgba(59, 163, 255, 0.2);
+    }
+    .pill {
+      display: inline-block;
+      background: rgba(255,255,255,0.1);
+      border-radius: 999px;
+      padding: 4px 12px;
+      margin-right: 6px;
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+    #meta {
+      margin-bottom: 24px;
+      padding: 16px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 10px;
+    }
+    #actions {
+      margin-bottom: 20px;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+    h3 {
+      margin-top: 0;
+      margin-bottom: 16px;
+      font-size: 20px;
+    }
+    .success-message {
+      background: rgba(29, 185, 84, 0.2);
+      border: 1px solid rgba(29, 185, 84, 0.5);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 20px;
+      text-align: center;
+      display: none;
+    }
+    .success-message a {
+      color: #1DB954;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .success-message a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <h1>날씨 기반 추천</h1>
+  <p>지금 소노벨 변산의 날씨를 바탕으로<br>당신의 Spotify 기록을 분석해 추천해드려요 🎧</p>
+
+  <button id="recommend">추천 받기</button>
+  <div id="loading">추천을 불러오는 중...</div>
+
+  <div id="result">
+    <div class="success-message" id="successMessage">
+      플레이리스트가 생성되었습니다! 🎉<br>
+      <a id="playlistLink" href="#" target="_blank">Spotify에서 보기 →</a>
+    </div>
+    
+    <h3>추천 결과</h3>
+    <div id="meta"></div>
+    
+    <div id="actions">
+      <button id="savePlaylist" class="success">
+        📝 플레이리스트로 저장
+      </button>
+    </div>
+    
+    <div id="tracks"></div>
+  </div>
+
+  <script>
+    const btn = document.getElementById("recommend");
+    const loading = document.getElementById("loading");
+    const result = document.getElementById("result");
+    const meta = document.getElementById("meta");
+    const tracks = document.getElementById("tracks");
+    const saveBtn = document.getElementById("savePlaylist");
+    const successMessage = document.getElementById("successMessage");
+    const playlistLink = document.getElementById("playlistLink");
+
+    let currentTrackIds = [];
+    let currentWeatherInfo = {};
+
+    btn.onclick = async () => {
+      btn.style.display = "none";
+      loading.style.display = "block";
+      result.style.display = "none";
+      successMessage.style.display = "none";
+      
+      try {
+        const res = await fetch("/recommend/weather", { credentials: "include" });
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(errorText);
+        }
+        const data = await res.json();
+
+        loading.style.display = "none";
+        result.style.display = "block";
+        btn.style.display = "inline-block";
+
+        // 트랙 ID 저장
+        currentTrackIds = data.tracks.map(t => t.id);
+        currentWeatherInfo = {
+          rule: data.trigger.rule,
+          weather: data.trigger.weather,
+          temp: data.trigger.feels_like
+        };
+
+        meta.innerHTML = `
+          <p>
+            <span class="pill">📍 ${data.location.name}</span>
+            <span class="pill">🌤️ ${data.trigger.weather}</span>
+            <span class="pill">🎵 ${data.trigger.rule}</span>
+            <span class="pill">🌡️ ${data.trigger.feels_like}°C</span>
+          </p>
+          <p style="margin-top: 12px;">
+            추천 키워드: ${data.keywords.map(k=>`<span class="pill">${k}</span>`).join("")}
+          </p>
+        `;
+
+        tracks.innerHTML = data.tracks
+          .map((track, i) => {
+            const name = track.name || 'Unknown Track';
+            const artists = track.artists || 'Unknown Artist';
+            const url = track.url || `https://open.spotify.com/track/${track.id}`;
+            
+            return `
+              <div class="track">
+                <div class="track-number">${i+1}</div>
+                <div class="track-info">
+                  <div class="track-name">${name}</div>
+                  <div class="track-artist">${artists}</div>
+                </div>
+                <a href="${url}" target="_blank" rel="noopener">재생 ▶</a>
+              </div>
+            `;
+          })
+          .join("");
+      } catch (err) {
+        loading.style.display = "none";
+        loading.textContent = "추천을 불러오는 중 오류가 발생했습니다: " + err.message;
+        loading.style.display = "block";
+        btn.style.display = "inline-block";
+        console.error(err);
+      }
+    };
+
+    // 플레이리스트 저장 버튼
+    saveBtn.onclick = async () => {
+      if (currentTrackIds.length === 0) {
+        alert("저장할 트랙이 없습니다.");
+        return;
+      }
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = "저장 중...";
+
+      try {
+        // 플레이리스트 이름 생성
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}`;
+        const playlistName = `🌤️ ${currentWeatherInfo.weather} - ${dateStr}`;
+        const description = `${currentWeatherInfo.temp}°C, ${currentWeatherInfo.rule} 분위기의 추천 플레이리스트`;
+
+        const res = await fetch("/recommend/weather/save", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            track_ids: currentTrackIds,
+            playlist_name: playlistName,
+            description: description
+          })
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.detail || "플레이리스트 생성 실패");
+        }
+
+        const data = await res.json();
+
+        // 성공 메시지 표시
+        successMessage.style.display = "block";
+        playlistLink.href = data.playlist_url;
+        
+        saveBtn.textContent = "✓ 저장 완료!";
+        setTimeout(() => {
+          saveBtn.disabled = false;
+          saveBtn.textContent = "📝 플레이리스트로 저장";
+        }, 3000);
+
+      } catch (err) {
+        alert("플레이리스트 저장 실패: " + err.message);
+        saveBtn.disabled = false;
+        saveBtn.textContent = "📝 플레이리스트로 저장";
+        console.error(err);
+      }
+    };
+  </script>
+</body>
+</html>

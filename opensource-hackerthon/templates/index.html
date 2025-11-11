@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spotify 로그인 데모</title>
+  <style>
+    body {
+      background: #0B0F12;
+      color: #fff;
+      font-family: Inter, sans-serif;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    button {
+      background: #1DB954;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 50px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      color: white;
+      transition: 0.2s;
+    }
+    button:hover { background: #1ed760; }
+    #info { margin-top: 20px; font-size: 18px; }
+  </style>
+</head>
+<body>
+  <h1>Spotify 로그인</h1>
+  <button id="login-btn">Spotify로 로그인</button>
+  <div id="info"></div>
+
+  <script>
+    document.getElementById('login-btn').onclick = () => {
+      window.location.href = '/login'; // FastAPI 라우터로 리다이렉트
+    }
+
+    async function checkUser() {
+      const res = await fetch('/current_user');
+      const data = await res.json();
+      if (data.logged_in) {
+        document.getElementById('info').textContent =
+          `${data.name}님 로그인됨 🎧 (Spotify ID: ${data.spotify_id})`;
+        document.getElementById('login-btn').textContent = '로그아웃';
+        document.getElementById('login-btn').onclick = () => {
+          window.location.href = '/logout';
+        }
+      }
+    }
+    checkUser();
+  </script>
+</body>
+</html>
