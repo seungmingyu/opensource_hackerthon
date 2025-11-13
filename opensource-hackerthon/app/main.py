@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from app.routers import user_router, weather_router
-from app.routers import lastfm_router
+from app.routers import lastfm_router, podcast_router
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -22,3 +22,4 @@ def weather_page(request: Request):
 app.include_router(user_router.router)
 app.include_router(weather_router.router)
 app.include_router(lastfm_router.router)
+app.include_router(podcast_router.router)

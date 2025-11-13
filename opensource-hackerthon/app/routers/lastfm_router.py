@@ -147,25 +147,83 @@ async def lf_top_by_tag(tag: str, limit=30) -> List[Dict]:
 
 
 # ====== 개선된 무드 매핑 ======
+# 1. 감정 축
 # 긍정적/밝은 분위기
-BRIGHT_HAPPY = {"happy", "upbeat", "cheerful", "fun", "party", "summer", "energetic", "positive", "uplifting", "feel good", "joyful", "sunny"}
+BRIGHT_HAPPY = {"happy", "upbeat", "cheerful", "fun", "party", "energetic", "positive", "uplifting", "feel good", "joyful", "euphoric"}
 # 부정적/어두운 분위기  
 DARK_SAD = {"sad", "melancholy", "depressing", "dark", "gloomy", "somber", "emotional", "tearjerker", "heartbreak", "lonely", "moody", "melancholic"}
 
+# 2. 에너지 축
 # 에너지 높음
-HIGH_ENERGY = {"rock", "metal", "punk", "hardcore", "aggressive", "intense", "heavy", "hard rock", "energetic", "powerful"}
+HIGH_ENERGY = {"rock", "metal", "punk", "hardcore", "aggressive", "intense", "heavy", "hard rock", "energetic", "powerful", "explosive"}
 # 에너지 낮음
-LOW_ENERGY = {"ambient", "chillout", "downtempo", "sleep", "meditation", "peaceful", "tranquil", "slow", "calm", "relaxing"}
+LOW_ENERGY = {"ambient", "chillout", "downtempo", "sleep", "meditation", "peaceful", "tranquil", "slow", "calm", "relaxing", "soothing"}
 
+# 3. 활동성 축
 # 신나는 음악
-DANCEABLE = {"dance", "edm", "house", "techno", "electro", "club", "disco", "electronic dance", "party", "upbeat"}
+DANCEABLE = {"dance", "edm", "house", "techno", "electro", "club", "disco", "electronic dance", "party", "upbeat", "groove"}
 # 차분한 음악
-CALM = {"acoustic", "piano", "classical", "jazz", "folk", "ballad", "soft", "gentle", "mellow", "chill"}
+CALM = {"acoustic", "piano", "classical", "jazz", "folk", "ballad", "soft", "gentle", "mellow", "chill", "smooth"}
 
+# 4. 대중성 축
 # 팝/메인스트림
-MAINSTREAM = {"pop", "top 40", "chart", "radio", "mainstream", "commercial"}
+MAINSTREAM = {"pop", "top 40", "chart", "radio", "mainstream", "commercial", "popular"}
 # 실험적/언더그라운드
-ALTERNATIVE = {"indie", "alternative", "experimental", "underground", "art rock", "avant-garde"}
+ALTERNATIVE = {"indie", "alternative", "experimental", "underground", "art rock", "avant-garde", "progressive"}
+
+# 5. 계절 축 ⭐ 새로 추가!
+# 여름 분위기
+SUMMER = {"summer", "tropical", "beach", "sunshine", "vacation", "hot", "sunny", "reggae", "latin", "caribbean", "island"}
+# 겨울 분위기
+WINTER = {"winter", "cold", "snow", "christmas", "cozy", "warm", "fireplace", "melancholic", "nostalgic"}
+# 봄 분위기
+SPRING = {"spring", "fresh", "blossom", "renewal", "light", "cheerful", "bright", "new beginning"}
+# 가을 분위기
+AUTUMN = {"autumn", "fall", "mellow", "nostalgic", "rainy", "contemplative", "introspective", "cozy"}
+
+# 6. 시간대 축 ⭐ 새로 추가!
+# 아침 분위기
+MORNING = {"morning", "wake up", "sunrise", "fresh", "energizing", "coffee", "starting", "bright"}
+# 밤 분위기
+NIGHT = {"night", "midnight", "nocturnal", "dreamy", "mysterious", "late night", "moonlight", "starry"}
+# 저녁 분위기
+EVENING = {"evening", "sunset", "twilight", "romantic", "dinner", "wine", "mellow", "golden hour"}
+
+# 7. 활동 축 ⭐ 새로 추가!
+# 운동/활동적
+WORKOUT = {"workout", "gym", "running", "exercise", "training", "fitness", "motivation", "power"}
+# 공부/집중
+STUDY = {"study", "focus", "concentration", "work", "productive", "reading", "background", "instrumental"}
+# 휴식/수면
+SLEEP = {"sleep", "lullaby", "bedtime", "rest", "peaceful", "quiet", "serene", "dreamy"}
+# 파티/사교
+PARTY = {"party", "celebration", "social", "fun", "festive", "drinking", "club", "dance"}
+
+# 8. 감성 축 ⭐ 새로 추가!
+# 로맨틱
+ROMANTIC = {"romantic", "love", "sweet", "tender", "intimate", "passionate", "sensual", "loving"}
+# 향수/추억
+NOSTALGIC = {"nostalgic", "memories", "throwback", "retro", "vintage", "old school", "reminiscent", "sentimental"}
+# 몽환적
+DREAMY = {"dreamy", "ethereal", "atmospheric", "floating", "surreal", "psychedelic", "spacey", "hypnotic"}
+# 강렬한
+INTENSE = {"intense", "dramatic", "epic", "powerful", "emotional", "passionate", "raw", "visceral"}
+
+# 9. 문화/지역 축 ⭐ 새로 추가!
+# K-POP
+KPOP = {"k-pop", "kpop", "korean", "idol", "korean pop"}
+# J-POP  
+JPOP = {"j-pop", "jpop", "japanese", "anime", "japanese pop"}
+# 라틴
+LATIN = {"latin", "spanish", "salsa", "reggaeton", "bachata", "brazilian", "samba"}
+# 힙합/랩
+HIPHOP = {"hip-hop", "hip hop", "rap", "trap", "underground rap", "boom bap"}
+
+# 10. 악기/사운드 축 ⭐ 새로 추가!
+# 보컬 중심
+VOCAL = {"vocal", "singing", "acapella", "choir", "voices", "harmonies"}
+# 악기 중심
+INSTRUMENTAL = {"instrumental", "no vocals", "orchestral", "symphony", "beats", "background"}
 
 # 🆕 장르별 분위기 추론 (감정 태그가 없을 때 사용)
 GENRE_TO_MOOD = {
@@ -191,22 +249,43 @@ GENRE_TO_MOOD = {
 
 
 def invert_tagset(tags: List[str]) -> List[str]:
-    """태그를 분석해서 주된 분위기의 반대만 생성 (다수결 방식)"""
+    """태그를 분석해서 주된 분위기의 반대 생성 - 10가지 축 지원"""
     s = set(t.lower() for t in tags)
     
     print(f"   🔍 태그 분석 (총 {len(s)}개): {', '.join(list(s)[:15])}")
     
-    # 각 카테고리별 점수 계산
-    bright_score = len(s & BRIGHT_HAPPY)
-    dark_score = len(s & DARK_SAD)
+    # 모든 카테고리별 점수 계산
+    scores = {
+        "bright": len(s & BRIGHT_HAPPY),
+        "dark": len(s & DARK_SAD),
+        "high_energy": len(s & HIGH_ENERGY),
+        "low_energy": len(s & LOW_ENERGY),
+        "danceable": len(s & DANCEABLE),
+        "calm": len(s & CALM),
+        "summer": len(s & SUMMER),
+        "winter": len(s & WINTER),
+        "spring": len(s & SPRING),
+        "autumn": len(s & AUTUMN),
+        "morning": len(s & MORNING),
+        "night": len(s & NIGHT),
+        "evening": len(s & EVENING),
+        "workout": len(s & WORKOUT),
+        "study": len(s & STUDY),
+        "sleep": len(s & SLEEP),
+        "party": len(s & PARTY),
+        "romantic": len(s & ROMANTIC),
+        "nostalgic": len(s & NOSTALGIC),
+        "dreamy": len(s & DREAMY),
+        "intense": len(s & INTENSE),
+        "kpop": len(s & KPOP),
+        "jpop": len(s & JPOP),
+        "latin": len(s & LATIN),
+        "hiphop": len(s & HIPHOP),
+        "vocal": len(s & VOCAL),
+        "instrumental": len(s & INSTRUMENTAL),
+    }
     
-    dance_score = len(s & DANCEABLE)
-    calm_score = len(s & CALM)
-    
-    high_energy_score = len(s & HIGH_ENERGY)
-    low_energy_score = len(s & LOW_ENERGY)
-    
-    # 🆕 장르를 보고 분위기 추론
+    # 장르 힌트 추가
     genre_hints = {"calm": 0, "energetic": 0, "dark": 0, "bright": 0}
     for tag in s:
         if tag in GENRE_TO_MOOD:
@@ -214,64 +293,186 @@ def invert_tagset(tags: List[str]) -> List[str]:
             genre_hints[mood] += 1
     
     if any(genre_hints.values()):
-        print(f"   💡 장르 기반 분위기 추론: {dict((k,v) for k,v in genre_hints.items() if v > 0)}")
-        # 장르 힌트를 점수에 반영
-        calm_score += genre_hints["calm"]
-        dance_score += genre_hints["energetic"]
-        dark_score += genre_hints["dark"]
-        bright_score += genre_hints["bright"]
+        scores["calm"] += genre_hints["calm"]
+        scores["danceable"] += genre_hints["energetic"]
+        scores["dark"] += genre_hints["dark"]
+        scores["bright"] += genre_hints["bright"]
     
+    # 점수 출력 (의미있는 것만)
     print(f"   📊 분위기 점수:")
-    print(f"      밝음: {bright_score} vs 어두움: {dark_score}")
-    print(f"      신남: {dance_score} vs 차분: {calm_score}")
-    print(f"      강함: {high_energy_score} vs 약함: {low_energy_score}")
+    meaningful = {k: v for k, v in scores.items() if v > 0}
+    if meaningful:
+        for k, v in sorted(meaningful.items(), key=lambda x: x[1], reverse=True)[:8]:
+            print(f"      {k}: {v}")
     
     opposite = []
+    reason = ""
     
-    # 1순위: 감정 (밝음 vs 어두움) - 차이가 2개 이상일 때만 반영
-    emotion_diff = abs(bright_score - dark_score)
-    if emotion_diff >= 2:
-        if bright_score > dark_score:
-            print(f"   ✅ 주요 분위기: 밝고 행복함 → 어두운 음악으로 반전")
-            opposite = ["sad", "melancholy", "dark", "emotional", "depressing", "somber", "gloomy"]
-        else:
-            print(f"   ✅ 주요 분위기: 어둡고 우울함 → 밝은 음악으로 반전")
-            opposite = ["happy", "upbeat", "cheerful", "positive", "uplifting", "feel good", "joyful"]
+    # 우선순위별 체크
     
-    # 2순위: 활동성 (신남 vs 차분) - 감정이 중립이면
-    elif emotion_diff < 2:
-        activity_diff = abs(dance_score - calm_score)
-        if activity_diff >= 2:
-            if dance_score > calm_score:
-                print(f"   ✅ 주요 분위기: 신나고 활동적 → 차분한 음악으로 반전")
-                opposite = ["acoustic", "piano", "ballad", "soft", "calm", "peaceful", "relaxing"]
-            else:
-                print(f"   ✅ 주요 분위기: 차분하고 조용함 → 신나는 음악으로 반전")
-                opposite = ["dance", "party", "energetic", "upbeat", "club", "edm", "house", "electro"]
-        
-        # 3순위: 에너지 레벨
-        else:
-            energy_diff = abs(high_energy_score - low_energy_score)
-            if energy_diff >= 2:
-                if high_energy_score > low_energy_score:
-                    print(f"   ✅ 주요 분위기: 에너지 높음 → 차분한 음악으로 반전")
-                    opposite = ["ambient", "chillout", "downtempo", "relaxing", "meditation"]
-                else:
-                    print(f"   ✅ 주요 분위기: 에너지 낮음 → 강한 음악으로 반전")
-                    opposite = ["rock", "energetic", "powerful", "intense"]
+    # 1️⃣ 계절 축 (가장 구체적!)
+    season_scores = {
+        "summer": scores["summer"],
+        "winter": scores["winter"],
+        "spring": scores["spring"],
+        "autumn": scores["autumn"]
+    }
+    max_season = max(season_scores.items(), key=lambda x: x[1])
+    if max_season[1] >= 2:
+        if max_season[0] == "summer":
+            reason = "여름 분위기 → 겨울/차분한 분위기로"
+            opposite = ["winter", "cold", "cozy", "calm", "acoustic", "piano", "mellow", "warm"]
+        elif max_season[0] == "winter":
+            reason = "겨울 분위기 → 여름/신나는 분위기로"
+            opposite = ["summer", "tropical", "beach", "upbeat", "sunny", "dance", "energetic", "fun"]
+        elif max_season[0] == "spring":
+            reason = "봄 분위기 → 가을/성숙한 분위기로"
+            opposite = ["autumn", "mellow", "nostalgic", "contemplative", "jazz", "folk"]
+        elif max_season[0] == "autumn":
+            reason = "가을 분위기 → 봄/밝은 분위기로"
+            opposite = ["spring", "fresh", "bright", "cheerful", "uplifting", "new"]
     
-    # 분위기가 정말 애매하면
+    # 2️⃣ 시간대 축
     if not opposite:
-        print(f"   ⚠️  분위기가 혼재됨 (명확한 경향 없음)")
-        
-        # 🆕 pop이나 hip-hop 같은 중립 장르면 신나는 음악으로
-        if "pop" in s or "hip-hop" in s or "hip hop" in s or "rap" in s:
-            print(f"   💡 팝/힙합 감지 → 신나는 댄스 음악으로 반전")
-            opposite = ["dance", "edm", "house", "party", "energetic", "club", "upbeat", "electro"]
-        else:
-            print(f"   💡 기본 전략: 차분하고 감성적인 음악 선택")
-            opposite = ["sad", "melancholy", "acoustic", "piano", "ballad", "emotional"]
+        time_scores = {
+            "morning": scores["morning"],
+            "night": scores["night"],
+            "evening": scores["evening"]
+        }
+        max_time = max(time_scores.items(), key=lambda x: x[1])
+        if max_time[1] >= 2:
+            if max_time[0] == "morning":
+                reason = "아침 분위기 → 밤 분위기로"
+                opposite = ["night", "midnight", "dreamy", "mysterious", "dark", "ambient"]
+            elif max_time[0] == "night":
+                reason = "밤 분위기 → 아침 분위기로"
+                opposite = ["morning", "fresh", "energizing", "bright", "upbeat", "wake up"]
+            elif max_time[0] == "evening":
+                reason = "저녁 분위기 → 낮 분위기로"
+                opposite = ["daytime", "energetic", "active", "bright", "uplifting"]
     
+    # 3️⃣ 활동 축
+    if not opposite:
+        activity_scores = {
+            "workout": scores["workout"],
+            "study": scores["study"],
+            "sleep": scores["sleep"],
+            "party": scores["party"]
+        }
+        max_activity = max(activity_scores.items(), key=lambda x: x[1])
+        if max_activity[1] >= 2:
+            if max_activity[0] == "workout":
+                reason = "운동 음악 → 휴식 음악으로"
+                opposite = ["sleep", "relaxing", "calm", "peaceful", "ambient", "soft"]
+            elif max_activity[0] == "study":
+                reason = "공부 음악 → 파티 음악으로"
+                opposite = ["party", "dance", "fun", "energetic", "upbeat", "club"]
+            elif max_activity[0] == "sleep":
+                reason = "수면 음악 → 운동 음악으로"
+                opposite = ["workout", "energetic", "power", "intense", "motivation", "rock"]
+            elif max_activity[0] == "party":
+                reason = "파티 음악 → 집중 음악으로"
+                opposite = ["study", "focus", "calm", "peaceful", "instrumental", "background"]
+    
+    # 4️⃣ 감성 축
+    if not opposite:
+        emotion_styles = {
+            "romantic": scores["romantic"],
+            "nostalgic": scores["nostalgic"],
+            "dreamy": scores["dreamy"],
+            "intense": scores["intense"]
+        }
+        max_emotion = max(emotion_styles.items(), key=lambda x: x[1])
+        if max_emotion[1] >= 2:
+            if max_emotion[0] == "romantic":
+                reason = "로맨틱 → 강렬한 음악으로"
+                opposite = ["intense", "powerful", "aggressive", "rock", "metal", "dramatic"]
+            elif max_emotion[0] == "nostalgic":
+                reason = "향수적 → 미래적/현대적 음악으로"
+                opposite = ["modern", "electronic", "edm", "futuristic", "techno", "progressive"]
+            elif max_emotion[0] == "dreamy":
+                reason = "몽환적 → 현실적/직설적 음악으로"
+                opposite = ["raw", "realistic", "rock", "punk", "aggressive", "direct"]
+            elif max_emotion[0] == "intense":
+                reason = "강렬함 → 부드러운 음악으로"
+                opposite = ["soft", "gentle", "calm", "peaceful", "mellow", "smooth"]
+    
+    # 5️⃣ 감정 축 (밝음 vs 어두움)
+    if not opposite:
+        emotion_diff = abs(scores["bright"] - scores["dark"])
+        if emotion_diff >= 2:
+            if scores["bright"] > scores["dark"]:
+                reason = "밝고 행복함 → 어두운 음악으로"
+                opposite = ["sad", "melancholy", "dark", "emotional", "depressing", "somber"]
+            else:
+                reason = "어둡고 우울함 → 밝은 음악으로"
+                opposite = ["happy", "upbeat", "cheerful", "positive", "uplifting", "joyful"]
+    
+    # 6️⃣ 활동성 축 (신남 vs 차분)
+    if not opposite:
+        activity_diff = abs(scores["danceable"] - scores["calm"])
+        if activity_diff >= 2:
+            if scores["danceable"] > scores["calm"]:
+                reason = "신나고 활동적 → 차분한 음악으로"
+                opposite = ["acoustic", "piano", "ballad", "soft", "calm", "peaceful"]
+            else:
+                reason = "차분하고 조용함 → 신나는 음악으로"
+                opposite = ["dance", "party", "energetic", "upbeat", "edm", "house"]
+    
+    # 7️⃣ 에너지 축
+    if not opposite:
+        energy_diff = abs(scores["high_energy"] - scores["low_energy"])
+        if energy_diff >= 2:
+            if scores["high_energy"] > scores["low_energy"]:
+                reason = "에너지 높음 → 차분한 음악으로"
+                opposite = ["ambient", "chillout", "downtempo", "relaxing", "meditation"]
+            else:
+                reason = "에너지 낮음 → 강한 음악으로"
+                opposite = ["rock", "energetic", "powerful", "intense", "metal"]
+    
+    # 8️⃣ 문화/장르 특화
+    if not opposite:
+        culture_scores = {
+            "kpop": scores["kpop"],
+            "jpop": scores["jpop"],
+            "latin": scores["latin"],
+            "hiphop": scores["hiphop"]
+        }
+        max_culture = max(culture_scores.items(), key=lambda x: x[1])
+        if max_culture[1] >= 1:
+            if max_culture[0] == "kpop":
+                reason = "K-POP → 서양 인디/얼터너티브로"
+                opposite = ["indie", "alternative", "rock", "folk", "singer-songwriter"]
+            elif max_culture[0] == "jpop":
+                reason = "J-POP → 서양 팝/댄스로"
+                opposite = ["pop", "dance", "edm", "house", "western"]
+            elif max_culture[0] == "latin":
+                reason = "라틴 → 북유럽/차분한 음악으로"
+                opposite = ["nordic", "calm", "folk", "acoustic", "mellow"]
+            elif max_culture[0] == "hiphop":
+                reason = "힙합 → 어쿠스틱/클래식으로"
+                opposite = ["acoustic", "classical", "folk", "piano", "strings"]
+    
+    # 9️⃣ 악기 축
+    if not opposite:
+        sound_diff = abs(scores["vocal"] - scores["instrumental"])
+        if sound_diff >= 2:
+            if scores["vocal"] > scores["instrumental"]:
+                reason = "보컬 중심 → 악기 중심으로"
+                opposite = ["instrumental", "beats", "orchestral", "electronic", "ambient"]
+            else:
+                reason = "악기 중심 → 보컬 중심으로"
+                opposite = ["vocal", "singing", "pop", "ballad", "choir"]
+    
+    # 🔟 기본 전략
+    if not opposite:
+        reason = "분위기 혼재 → 기본 반전 전략"
+        if "pop" in s or "hip-hop" in s or "hip hop" in s or "rap" in s:
+            opposite = ["dance", "edm", "house", "party", "energetic"]
+        else:
+            opposite = ["sad", "melancholy", "acoustic", "piano", "ballad"]
+    
+    print(f"   ✅ {reason}")
     print(f"   🎯 최종 반대 태그 ({len(opposite)}개): {', '.join(opposite[:8])}")
     
     return opposite
@@ -425,6 +626,63 @@ async def recommend_from_lastfm(url: str, invert: bool, limit: int, variant: int
             # 반대 추천 모드
             print(f"   🏷️  태그 기반 반대 분위기 검색")
             tags = []
+            
+            # 🆕 플레이리스트 이름 기반 태그 추가 (우선순위!)
+            name_lower = (playlist_name or "").lower()
+            print(f"   🔍 플레이리스트 이름 분석: '{playlist_name}'")
+            
+            inferred_tags = []
+            # 계절 키워드
+            if any(k in name_lower for k in ["여름", "summer", "더워", "hot", "beach", "tropical"]):
+                inferred_tags.extend(["summer", "tropical", "hot", "beach", "sunny"])
+                print(f"      → 여름 분위기 감지!")
+            elif any(k in name_lower for k in ["겨울", "winter", "추워", "cold", "snow", "크리스마스", "christmas"]):
+                inferred_tags.extend(["winter", "cold", "snow", "cozy"])
+                print(f"      → 겨울 분위기 감지!")
+            elif any(k in name_lower for k in ["봄", "spring", "벚꽃", "blossom"]):
+                inferred_tags.extend(["spring", "fresh", "blossom"])
+                print(f"      → 봄 분위기 감지!")
+            elif any(k in name_lower for k in ["가을", "autumn", "fall"]):
+                inferred_tags.extend(["autumn", "fall", "nostalgic"])
+                print(f"      → 가을 분위기 감지!")
+            
+            # 시간대 키워드
+            if any(k in name_lower for k in ["아침", "morning", "wake"]):
+                inferred_tags.extend(["morning", "fresh", "energizing"])
+                print(f"      → 아침 분위기 감지!")
+            elif any(k in name_lower for k in ["밤", "night", "midnight"]):
+                inferred_tags.extend(["night", "midnight", "nocturnal"])
+                print(f"      → 밤 분위기 감지!")
+            
+            # 활동 키워드
+            if any(k in name_lower for k in ["운동", "workout", "gym", "fitness"]):
+                inferred_tags.extend(["workout", "energetic", "power"])
+                print(f"      → 운동 분위기 감지!")
+            elif any(k in name_lower for k in ["공부", "study", "집중", "focus"]):
+                inferred_tags.extend(["study", "focus", "concentration"])
+                print(f"      → 공부 분위기 감지!")
+            elif any(k in name_lower for k in ["잠", "수면", "sleep", "lullaby"]):
+                inferred_tags.extend(["sleep", "peaceful", "calm"])
+                print(f"      → 수면 분위기 감지!")
+            elif any(k in name_lower for k in ["파티", "party", "club"]):
+                inferred_tags.extend(["party", "dance", "club"])
+                print(f"      → 파티 분위기 감지!")
+            
+            # 감성 키워드
+            if any(k in name_lower for k in ["로맨틱", "romantic", "사랑", "love"]):
+                inferred_tags.extend(["romantic", "love", "sweet"])
+                print(f"      → 로맨틱 분위기 감지!")
+            elif any(k in name_lower for k in ["우울", "sad", "슬픈", "melancholy"]):
+                inferred_tags.extend(["sad", "melancholy", "emotional"])
+                print(f"      → 우울한 분위기 감지!")
+            elif any(k in name_lower for k in ["신나는", "happy", "밝은", "upbeat", "cheerful"]):
+                inferred_tags.extend(["happy", "upbeat", "cheerful"])
+                print(f"      → 신나는 분위기 감지!")
+            
+            if inferred_tags:
+                tags.extend(inferred_tags * 3)  # 가중치 부여 (3배)
+                print(f"   ✅ 플레이리스트 이름 기반 태그 추가: {', '.join(set(inferred_tags))}")
+            
             success_count = 0
             fail_count = 0
             
@@ -605,11 +863,45 @@ async def recommend(req: RecommendRequest, u = Depends(current_user), db = Depen
     
     try:
         from app.services.spotify import playlist_search, playlist_tracks
+        from app.services import user as user_service
         import random
         
-        # 1. 플레이리스트 이름으로 검색
+        access_token = u.access_token
+        
+        # 1. 플레이리스트 이름으로 검색 (토큰 갱신 로직 포함)
         print(f"\n[Last.fm 추천] 플레이리스트 검색: '{req.playlist_name}'")
-        search_results = playlist_search(u.access_token, req.playlist_name, market="KR", limit=8)
+        
+        try:
+            search_results = playlist_search(access_token, req.playlist_name, market="KR", limit=8)
+        except Exception as e:
+            error_str = str(e)
+            # 401 에러이고 refresh_token이 있으면 갱신 시도
+            if "401" in error_str and u.refresh_token:
+                print(f"[lastfm_router] Token expired, attempting refresh...")
+                try:
+                    new_token_data = user_service.refresh_access_token(u.refresh_token)
+                    access_token = new_token_data.get("access_token")
+                    
+                    if not access_token:
+                        raise HTTPException(401, "토큰 갱신 실패. 다시 로그인해주세요.")
+                    
+                    # DB 업데이트
+                    u.access_token = access_token
+                    if new_token_data.get("refresh_token"):
+                        u.refresh_token = new_token_data["refresh_token"]
+                    db.add(u)
+                    db.commit()
+                    
+                    print(f"[lastfm_router] Token refreshed successfully, retrying search...")
+                    
+                    # 갱신된 토큰으로 재시도
+                    search_results = playlist_search(access_token, req.playlist_name, market="KR", limit=8)
+                    
+                except Exception as refresh_error:
+                    print(f"[lastfm_router] Refresh failed: {refresh_error}")
+                    raise HTTPException(401, "토큰이 만료되었습니다. 로그아웃 후 다시 로그인해주세요.")
+            else:
+                raise
         
         if not search_results:
             raise HTTPException(404, f"'{req.playlist_name}' 플레이리스트를 찾을 수 없습니다")
@@ -653,3 +945,177 @@ async def recommend(req: RecommendRequest, u = Depends(current_user), db = Depen
     except Exception as e:
         print(f"[Last.fm 추천] 오류: {e}")
         raise HTTPException(500, f"Internal error: {e!r}")
+
+# 플레이리스트 저장 요청 모델
+class SaveLastfmPlaylistRequest(BaseModel):
+    track_names: List[Dict[str, str]]  # [{"name": "song", "artist": "artist"}]
+    playlist_name: str
+    description: str = ""
+
+
+@router.post("/recommend/save")
+async def save_lastfm_playlist(
+    request: SaveLastfmPlaylistRequest,
+    u = Depends(current_user),
+    db = Depends(get_db)
+):
+    """
+    Last.fm 추천곡을 Spotify 플레이리스트로 저장
+    Deezer의 곡 이름/아티스트로 Spotify에서 검색 후 저장
+    """
+    if not u:
+        raise HTTPException(401, "로그인이 필요합니다")
+    
+    if not request.track_names:
+        raise HTTPException(400, "트랙 정보가 필요합니다")
+    
+    access_token = u.access_token
+    
+    print(f"\n[Last.fm 플레이리스트 저장 시작]")
+    print(f"  - 플레이리스트명: {request.playlist_name}")
+    print(f"  - 트랙 수: {len(request.track_names)}개")
+    print(f"  - 설명: {request.description}")
+    
+    try:
+        from app.services.spotify import track_search, create_playlist, add_tracks_to_playlist
+        
+        # 1단계: Spotify에서 각 곡 검색
+        print(f"\n  [1단계] Spotify에서 트랙 검색 중...")
+        spotify_track_ids = []
+        not_found = []
+        
+        for idx, track_info in enumerate(request.track_names, 1):
+            track_name = track_info.get("name", "")
+            artist_name = track_info.get("artist", "")
+            
+            if not track_name or not artist_name:
+                continue
+            
+            # Spotify 검색 쿼리 구성
+            query = f"{track_name} {artist_name}"
+            
+            try:
+                # Spotify에서 검색
+                found_ids = track_search(access_token, query, market="KR", limit=1)
+                
+                if found_ids:
+                    spotify_track_ids.append(found_ids[0])
+                    if idx <= 5:
+                        print(f"    ✓ [{idx}] {track_name} - {artist_name}")
+                else:
+                    not_found.append(f"{track_name} - {artist_name}")
+                    if idx <= 5:
+                        print(f"    ✗ [{idx}] {track_name} - {artist_name} (Spotify에서 찾을 수 없음)")
+                        
+            except Exception as e:
+                print(f"    ✗ [{idx}] 검색 오류: {e}")
+                not_found.append(f"{track_name} - {artist_name}")
+        
+        print(f"\n  📊 검색 결과:")
+        print(f"    - 찾은 곡: {len(spotify_track_ids)}개")
+        print(f"    - 못 찾은 곡: {len(not_found)}개")
+        
+        if not spotify_track_ids:
+            raise HTTPException(404, "Spotify에서 해당 곡들을 찾을 수 없습니다")
+        
+        # 2단계: 플레이리스트 생성
+        print(f"\n  [2단계] Spotify 플레이리스트 생성 중...")
+        playlist_id = create_playlist(
+            access_token,
+            u.spotify_id,
+            request.playlist_name,
+            request.description,
+            public=False
+        )
+        
+        # 3단계: 트랙 추가
+        print(f"\n  [3단계] 트랙 추가 중...")
+        add_tracks_to_playlist(access_token, playlist_id, spotify_track_ids)
+        
+        print(f"  ✓ 플레이리스트 저장 완료: {playlist_id}\n")
+        
+        return {
+            "success": True,
+            "playlist_id": playlist_id,
+            "playlist_url": f"https://open.spotify.com/playlist/{playlist_id}",
+            "tracks_added": len(spotify_track_ids),
+            "tracks_not_found": len(not_found),
+            "message": f"플레이리스트가 생성되었습니다! ({len(spotify_track_ids)}곡 추가)"
+        }
+        
+    except HTTPException:
+        raise
+    except RuntimeError as e:
+        error_str = str(e)
+        
+        # 401 에러이고 refresh_token이 있으면 갱신 시도
+        if "401" in error_str and u.refresh_token:
+            print(f"[lastfm_router] Token error during playlist creation, attempting refresh...")
+            
+            try:
+                from app.services import user
+                new_token_data = user.refresh_access_token(u.refresh_token)
+                new_access_token = new_token_data.get("access_token")
+                
+                if not new_access_token:
+                    raise HTTPException(401, "토큰 갱신 실패. 다시 로그인해주세요.")
+                
+                # DB 업데이트
+                u.access_token = new_access_token
+                if new_token_data.get("refresh_token"):
+                    u.refresh_token = new_token_data["refresh_token"]
+                db.add(u)
+                db.commit()
+                
+                print(f"[lastfm_router] Token refreshed, retrying playlist creation...")
+                
+                # 갱신된 토큰으로 재시도
+                from app.services.spotify import track_search, create_playlist, add_tracks_to_playlist
+                
+                spotify_track_ids = []
+                for track_info in request.track_names:
+                    track_name = track_info.get("name", "")
+                    artist_name = track_info.get("artist", "")
+                    if not track_name or not artist_name:
+                        continue
+                    query = f"{track_name} {artist_name}"
+                    try:
+                        found_ids = track_search(new_access_token, query, market="KR", limit=1)
+                        if found_ids:
+                            spotify_track_ids.append(found_ids[0])
+                    except:
+                        pass
+                
+                if not spotify_track_ids:
+                    raise HTTPException(404, "Spotify에서 해당 곡들을 찾을 수 없습니다")
+                
+                playlist_id = create_playlist(
+                    new_access_token,
+                    u.spotify_id,
+                    request.playlist_name,
+                    request.description,
+                    public=False
+                )
+                
+                add_tracks_to_playlist(new_access_token, playlist_id, spotify_track_ids)
+                
+                return {
+                    "success": True,
+                    "playlist_id": playlist_id,
+                    "playlist_url": f"https://open.spotify.com/playlist/{playlist_id}",
+                    "tracks_added": len(spotify_track_ids),
+                    "message": "플레이리스트가 생성되었습니다!"
+                }
+                
+            except Exception as refresh_error:
+                print(f"[lastfm_router] Playlist creation failed: {refresh_error}")
+                raise HTTPException(
+                    401,
+                    "토큰이 만료되었습니다. 다시 로그인해주세요."
+                )
+        else:
+            raise HTTPException(500, f"플레이리스트 생성 실패: {error_str}")
+    
+    except Exception as e:
+        print(f"[lastfm_router] Unexpected error: {e}")
+        raise HTTPException(500, f"플레이리스트 생성 중 오류 발생: {str(e)}")

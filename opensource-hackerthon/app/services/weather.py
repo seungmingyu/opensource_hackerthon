@@ -1,6 +1,9 @@
 import os, time, requests
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import Optional, Tuple
+
+# 한국 시간대 (UTC+9)
+KST = timezone(timedelta(hours=9))
 
 OW_KEY = os.getenv("OPENWEATHERMAP")
 DEFAULT_LAT, DEFAULT_LON = 35.6462, 126.5051
@@ -26,7 +29,8 @@ def get_current_weather(lat: Optional[float]=None, lon: Optional[float]=None) ->
 
 def resolve_mood(w: dict, now: Optional[datetime]=None) -> dict:
     """날씨와 시간대를 분석하여 음악 분위기 결정"""
-    now = now or datetime.now()
+    # 한국 시간대(KST)로 현재 시간 가져오기
+    now = now or datetime.now(KST)
     main = (w.get("weather",[{}])[0].get("main","Clear")).lower()
     feels = float(w.get("main",{}).get("feels_like", 18.0))
     wind = float(w.get("wind",{}).get("speed", 2.0))

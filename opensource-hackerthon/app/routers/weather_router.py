@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import List
 from app.services.weather import get_current_weather, resolve_mood, DEFAULT_LAT, DEFAULT_LON
 from app.services.spotify import recommend_by_weather, create_playlist, add_tracks_to_playlist
@@ -8,6 +8,9 @@ from app.routers.user_router import current_user
 from app.models.user import User
 from app.services import user
 from app.core.database import get_db
+
+# 한국 시간대 (UTC+9)
+KST = timezone(timedelta(hours=9))
 
 router = APIRouter(prefix="/recommend", tags=["recommend"])
 
@@ -67,12 +70,13 @@ def recommend_weather(
     print(f"  - 풍속(wind): {w.get('wind', {}).get('speed')}m/s")
     print(f"{'='*60}\n")
     
-    mood = resolve_mood(w, datetime.now())
+    # 한국 시간대로 mood 분석
+    mood = resolve_mood(w, datetime.now(KST))
     
     print(f"[분위기 분석 결과]")
     print(f"  - Rule: {mood['rule']}")
     print(f"  - Keywords: {mood['keywords']}")
-    print(f"  - 현재 시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"  - 현재 시간: {datetime.now(KST).strftime('%Y-%m-%d %H:%M:%S')} (KST)")
     print(f"{'='*60}\n")
 
     # 첫 시도
@@ -138,7 +142,7 @@ def recommend_weather(
     return {
         "location": {"name": location_name, "lat": lat, "lon": lon},
         "trigger": {
-            "time_band": "dawn" if 0 <= datetime.now().hour < 6 else "other",
+            "time_band": "dawn" if 0 <= datetime.now(KST).hour < 6 else "other",
             "feels_like": feels_like_temp,
             "weather": w.get("weather", [{}])[0].get("main"),
             "rule": mood["rule"],

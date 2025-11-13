@@ -498,7 +498,7 @@
     <div class="tab-nav">
       <button class="tab-btn active" onclick="switchTab(0)">🌤️ 날씨 맞춤</button>
       <button class="tab-btn" onclick="switchTab(1)">🎼 기분 전환</button>
-      <button class="tab-btn" onclick="switchTab(2)">✨ 더보기</button>
+      <button class="tab-btn" onclick="switchTab(2)">🎙️ 팟캐스트</button>
     </div>
 
     <!-- 탭 1: 날씨 기반 추천 -->
@@ -586,6 +586,11 @@
           <div class="meta-tags" id="playlistMeta"></div>
           
           <div class="track-list" id="playlistTracks"></div>
+          
+          <button class="action-btn" id="playlistSaveBtn" style="margin-top: 12px;">
+            💾 Spotify에 저장
+          </button>
+          <div class="success-msg" id="playlistSuccess"></div>
         </div>
       </div>
 
@@ -598,16 +603,51 @@
       </div>
     </div>
 
-    <!-- 탭 3: 더보기 -->
+    <!-- 탭 3: 팟캐스트 추천 -->
     <div class="tab-content" id="tab3">
       <div class="feature-card">
-        <div class="feature-icon">✨</div>
-        <div class="feature-title">준비 중</div>
+        <div class="feature-icon">🎙️</div>
+        <div class="feature-title">아티스트 팟캐스트</div>
         <div class="feature-desc">
-          더 많은 음악 추천 기능이<br>
-          곧 찾아올 예정이에요
+          좋아하는 아티스트의 인터뷰나<br>
+          관련 팟캐스트 에피소드를<br>
+          찾아드려요
         </div>
-        <button class="action-btn" disabled>Coming Soon</button>
+        
+        <div class="input-group">
+          <input 
+            type="text" 
+            class="input-field" 
+            id="artistName"
+            placeholder="아티스트 이름 입력 (예: NewJeans)"
+          />
+        </div>
+        
+        <button class="action-btn" onclick="getPodcastRecommendation()">
+          팟캐스트 찾기
+        </button>
+      </div>
+
+      <!-- 팟캐스트 추천 결과 -->
+      <div id="podcastResult" style="display: none;">
+        <div class="result-panel">
+          <div class="result-header">
+            <div class="result-title">추천 팟캐스트</div>
+            <div class="result-count" id="podcastCount">0개</div>
+          </div>
+          
+          <div class="meta-tags" id="podcastMeta"></div>
+          
+          <div class="track-list" id="podcastEpisodes"></div>
+        </div>
+      </div>
+
+      <!-- 로딩 상태 -->
+      <div id="podcastLoading" style="display: none;">
+        <div class="loading-state">
+          <div class="loading-spinner"></div>
+          <div class="loading-text">팟캐스트 검색 중...</div>
+        </div>
       </div>
     </div>
   </div>
@@ -622,6 +662,7 @@
 
     let weatherData = null;
     let lastfmVariant = 0;
+    let lastfmData = null;
 
     // 탭 전환
     function switchTab(index) {
@@ -710,6 +751,7 @@
         
         loadingDiv.style.display = 'none';
         resultDiv.style.display = 'block';
+        document.getElementById('playlistSuccess').classList.remove('show');
         document.getElementById('weatherSuccess').classList.remove('show');
         
       } catch (err) {
@@ -812,6 +854,7 @@
         }
         
         const data = await res.json();
+        lastfmData = data;  // Store for saving
         lastfmVariant += 1;
         
         // 태그 한글 번역
@@ -883,9 +926,161 @@
         
         loadingDiv.style.display = 'none';
         resultDiv.style.display = 'block';
+        document.getElementById('playlistSuccess').classList.remove('show');
         
       } catch (err) {
         console.error('Playlist recommendation error:', err);
+        loadingDiv.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">⚠️</div>
+            <div class="empty-text">오류가 발생했습니다<br>${err.message}</div>
+          </div>
+        `;
+        setTimeout(() => {
+          loadingDiv.style.display = 'none';
+        }, 3000);
+      }
+    }
+
+    // 플레이리스트 저장
+    document.getElementById('playlistSaveBtn').onclick = async function() {
+      if (!lastfmData) return;
+      
+      const btn = this;
+      const msg = document.getElementById('playlistSuccess');
+      
+      btn.disabled = true;
+      btn.textContent = '저장 중...';
+      msg.classList.remove('show');
+      
+      try {
+        const now = new Date();
+        const date = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}`;
+        
+        // 태그 정보 가져오기
+        let tagsText = '추천 음악';
+        if (lastfmData.used_tags && lastfmData.used_tags.length > 0) {
+          const tagTranslations = {
+            'acoustic': '어쿠스틱', 'piano': '피아노', 'ballad': '발라드',
+            'jazz': '재즈', 'classical': '클래식', 'ambient': '앰비언트',
+            'dance': '댄스', 'electronic': '일렉트로닉', 'pop': '팝',
+            'energetic': '에너제틱', 'party': '파티', 'house': '하우스',
+            'edm': 'EDM', 'happy': '행복한', 'sad': '슬픈',
+            'chill': '칠', 'hip-hop': '힙합', 'rock': '록', 'indie': '인디',
+            'k-pop': 'K-POP', 'lofi': '로파이'
+          };
+          
+          const translatedTags = lastfmData.used_tags.slice(0, 3).map(tag => 
+            tagTranslations[tag.toLowerCase()] || tag
+          );
+          tagsText = translatedTags.join(', ');
+        }
+        
+        // 트랙 정보 구성 (name, artist)
+        const trackNames = lastfmData.tracks.map(t => ({
+          name: t.name,
+          artist: t.artists[0] || 'Unknown Artist'
+        }));
+        
+        const res = await fetch('/lastfm/recommend/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            track_names: trackNames,
+            playlist_name: `🎼 ${tagsText} - ${date}`,
+            description: `Last.fm 기반 추천 (${tagsText})`
+          })
+        });
+        
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || '저장 실패');
+        }
+        
+        const result = await res.json();
+        
+        msg.innerHTML = `플레이리스트가 생성되었습니다! 🎉<br><a href="${result.playlist_url}" target="_blank">Spotify에서 보기 →</a>`;
+        msg.classList.add('show');
+        
+        btn.textContent = '✓ 저장 완료!';
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.textContent = '💾 Spotify에 저장';
+        }, 3000);
+        
+      } catch (err) {
+        alert('저장 실패: ' + err.message);
+        btn.disabled = false;
+        btn.textContent = '💾 Spotify에 저장';
+      }
+    };
+
+    // 팟캐스트 추천
+    async function getPodcastRecommendation() {
+      const artistName = document.getElementById('artistName').value.trim();
+      
+      if (!artistName) {
+        alert('아티스트 이름을 입력해주세요');
+        return;
+      }
+      
+      const resultDiv = document.getElementById('podcastResult');
+      const loadingDiv = document.getElementById('podcastLoading');
+      
+      resultDiv.style.display = 'none';
+      loadingDiv.style.display = 'block';
+      
+      try {
+        const res = await fetch('/podcast/recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            artist_name: artistName,
+            limit: 5
+          })
+        });
+        
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          const errorMsg = errorData.detail || `HTTP ${res.status}`;
+          throw new Error(errorMsg);
+        }
+        
+        const data = await res.json();
+        
+        // 메타 정보 표시
+        const artistsText = data.related_artists.slice(0, 3).join(', ') + 
+          (data.related_artists.length > 3 ? ' 외' : '');
+        document.getElementById('podcastMeta').innerHTML = `
+          <div class="meta-tag"><span>🎤</span>${data.artist}</div>
+          <div class="meta-tag"><span>👥</span>유사 아티스트: ${artistsText}</div>
+        `;
+        
+        document.getElementById('podcastCount').textContent = `${data.recommendations.length}개`;
+        
+        // 에피소드 리스트 렌더링
+        document.getElementById('podcastEpisodes').innerHTML = data.recommendations.map(ep => {
+          const img = ep.image || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="50" height="50"%3E%3Crect fill="%23333" width="50" height="50"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23666" font-size="20"%3E🎙️%3C/text%3E%3C/svg%3E';
+          
+          return `
+            <div class="track-item" onclick="window.open('${ep.url}', '_blank')">
+              <img src="${img}" class="track-img" alt="">
+              <div class="track-info">
+                <div class="track-name">${ep.name}</div>
+                <div class="track-artist">${ep.show_name} · ${ep.duration_minutes}분</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+        
+        loadingDiv.style.display = 'none';
+        resultDiv.style.display = 'block';
+        document.getElementById('playlistSuccess').classList.remove('show');
+        
+      } catch (err) {
+        console.error('Podcast recommendation error:', err);
         loadingDiv.innerHTML = `
           <div class="empty-state">
             <div class="empty-icon">⚠️</div>
